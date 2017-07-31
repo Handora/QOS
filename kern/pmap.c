@@ -77,7 +77,7 @@ static void check_page_installed_pgdir(void);
 //
 // If n==0, returns the address of the next free page without allocating
 // anything.
-//
+// I
 // If we're out of memory, boot_alloc should panic.
 // This function may ONLY be used during initialization,
 // before the page_free_list list has been set up.
@@ -103,7 +103,13 @@ boot_alloc(uint32_t n)
 	//
 	// LAB 2: Your code here.
 
-	return NULL;
+    result = nextfree;
+    nextfree = ROUNDUP((char *) nextfree + n, PGSIZE);
+    if ((int)PADDR(nextfree) > (npages * PGSIZE)) {
+        panic("boot alloc: out of memory!");
+    }
+
+	return result;
 }
 
 // Set up a two-level page table:
