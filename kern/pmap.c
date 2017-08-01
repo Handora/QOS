@@ -243,7 +243,6 @@ mem_init(void)
 //
 void
 page_init(void)
-        cprintf("hello\n");
 {
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
@@ -370,22 +369,24 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
     uint32_t pdi = PDX((uintptr_t)va);
     uint32_t pti = PTX((uintptr_t)va);
-    pte_t *pt = (pte_t *)pgdir[pdi];
+    uint32_t pt = pgdir[pdi];
     struct PageInfo *newPage;
 
-    if (pt == NULL) {
+    if (pt & PTE_P) {
+        return (pte_t *)(KADDR(PTE_ADDR(pt)) + pti);
+    }else {
         if (create) {
-            newPage = page_alloc(1);
+            newPage = page_alloc(ALLOC_ZERO);
             if (newPage == NULL) {
                 return NULL;
             }
             newPage->pp_ref++;
-            return (pte_t *)page2pa(newPage);
+            pgdir[pdi] = (uint32_t)page2pa(newPage) | PTE_P;
+            return (pte_t *)(KADDR(PTE_ADDR(pt)) + pti); //TODO: not understand why??
         } else {
             return NULL;
         }
     }
-    return pt;
 }
 
 //
@@ -403,14 +404,14 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
     uint32_t i;
-    pte_t *pt;
+    pte_t *pte;
 
     for (i=0; i<size; i+=PGSIZE) {
-        pt = pgdir_walk(pgdir, (void *)(va+i), 1);
-        if (pt == NULL) {
+        pte = pgdir_walk(pgdir, (void *)(va+i), 1);
+        if (pte == NULL) {
             panic("boot_map_region: out of space\n");
         }
-        pt[PTX(va)] = (pa+i) | perm | PTE_P;
+        *pte = (pa+i) | perm | PTE_P;
     }
 }
 
@@ -442,18 +443,17 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-    pte_t *pt = pgdir_walk(pgdir, va, 1);
+    pte_t *pte = pgdir_walk(pgdir, va, 1);
 
-    if (pt == NULL) {
+    if (pte == NULL) {
         return -E_NO_MEM;
     }
 
-    if (pt[PTX((uintptr_t)va)] != 0) {
+    if (*pte & PTE_P) {
         page_remove(pgdir, va);
-        pt = pgdir_walk(pgdir, va, 1);
     }
 
-    pt[PTX((uintptr_t)va)] = page2pa(pp) | perm | PTE_P;
+    *pte = page2pa(pp) | perm | PTE_P;
     pp->pp_ref++;
     return 0;
 }
@@ -472,20 +472,21 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-    pte_t *pt;
-    uint32_t pa;
+    pte_t *pte;
+    physaddr_t pa;
 
-    pt = pgdir_walk(pgdir, va, 0);
-    if (pt == 0) {
+    pte = pgdir_walk(pgdir, va, 1);
+    // alloc failure in pgdir_walk
+    if (pte == 0) {
         return NULL;
     }
 
     if (pte_store) {
-        *pte_store = pt + PTX((uintptr_t)va);
+        pte_store = &pte;
     }
 
-    pa = pt[PTX((uintptr_t)va)];
-    if (pa == 0) {
+    pa = (physaddr_t)*pte;
+    if (!(pa & PTE_P)) {
         return NULL;
     }
 
@@ -519,7 +520,7 @@ page_remove(pde_t *pgdir, void *va)
     }
 
     if(pte) {
-        pte = 0;
+        *pte = 0;
         tlb_invalidate(pgdir, va);
     }
     page_decref(pp);
