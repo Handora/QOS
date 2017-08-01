@@ -243,6 +243,7 @@ mem_init(void)
 //
 void
 page_init(void)
+        cprintf("hello\n");
 {
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
@@ -266,7 +267,6 @@ page_init(void)
 
 	for (i = 0; i < npages; i++) {
         if (i ==0 || (i >= PGNUM(IOPHYSMEM) && i < PGNUM(PADDR(next)))) {
-		    pages[i].pp_ref = 1;
             pages[i].pp_link = 0;
         } else {
 		    pages[i].pp_ref = 0;
@@ -368,8 +368,24 @@ page_decref(struct PageInfo* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+    uint32_t pdi = PDX((uintptr_t)va);
+    uint32_t pti = PTX((uintptr_t)va);
+    pte_t *pt = (pte_t *)pgdir[pdi];
+    struct PageInfo *newPage;
+
+    if (pt == NULL) {
+        if (create) {
+            newPage = page_alloc(1);
+            if (newPage == NULL) {
+                return NULL;
+            }
+            newPage->pp_ref++;
+            return (pte_t *)page2pa(newPage);
+        } else {
+            return NULL;
+        }
+    }
+    return pt;
 }
 
 //
@@ -382,11 +398,20 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 // above UTOP. As such, it should *not* change the pp_ref field on the
 // mapped pages.
 //
-// Hint: the TA solution uses pgdir_walk
+// Hint: The TA solution uses pgdir_walk
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+    uint32_t i;
+    pte_t *pt;
+
+    for (i=0; i<size; i+=PGSIZE) {
+        pt = pgdir_walk(pgdir, (void *)(va+i), 1);
+        if (pt == NULL) {
+            panic("boot_map_region: out of space\n");
+        }
+        pt[PTX(va)] = (pa+i) | perm | PTE_P;
+    }
 }
 
 //
@@ -403,7 +428,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 //
 // Corner-case hint: Make sure to consider what happens when the same
 // pp is re-inserted at the same virtual address in the same pgdir.
-// However, try not to distinguish this case in your code, as this
+// However, try not to distinguish this case in your consider, as this
 // frequently leads to subtle bugs; there's an elegant way to handle
 // everything in one code path.
 //
@@ -417,8 +442,20 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
-	return 0;
+    pte_t *pt = pgdir_walk(pgdir, va, 1);
+
+    if (pt == NULL) {
+        return -E_NO_MEM;
+    }
+
+    if (pt[PTX((uintptr_t)va)] != 0) {
+        page_remove(pgdir, va);
+        pt = pgdir_walk(pgdir, va, 1);
+    }
+
+    pt[PTX((uintptr_t)va)] = page2pa(pp) | perm | PTE_P;
+    pp->pp_ref++;
+    return 0;
 }
 
 //
@@ -435,8 +472,24 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+    pte_t *pt;
+    uint32_t pa;
+
+    pt = pgdir_walk(pgdir, va, 0);
+    if (pt == 0) {
+        return NULL;
+    }
+
+    if (pte_store) {
+        *pte_store = pt + PTX((uintptr_t)va);
+    }
+
+    pa = pt[PTX((uintptr_t)va)];
+    if (pa == 0) {
+        return NULL;
+    }
+
+    return pa2page(pa);
 }
 
 //
@@ -457,7 +510,19 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+    struct PageInfo *pp;
+    pte_t *pte;
+
+    pp = page_lookup(pgdir, va, &pte);
+    if (pp == NULL) {
+        return ;
+    }
+
+    if(pte) {
+        pte = 0;
+        tlb_invalidate(pgdir, va);
+    }
+    page_decref(pp);
 }
 
 //
