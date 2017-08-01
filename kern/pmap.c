@@ -105,7 +105,9 @@ boot_alloc(uint32_t n)
 
     result = nextfree;
     nextfree = ROUNDUP((char *) nextfree + n, PGSIZE);
-    if ((int)PADDR(nextfree) > npages * PGSIZE) {
+
+    // if bigger than the phtsical memory, panic
+    if (PADDR(nextfree) > npages * PGSIZE) {
         panic("boot alloc: out of memory\n");
     }
 
@@ -113,7 +115,7 @@ boot_alloc(uint32_t n)
 }
 
 // Set up a two-level page table:
-//    kern_pgdir is its linear (virtual) address of the root
+//    kern_pgdir is its linear (virtual) addresses of the root
 //
 // This function only sets up the kernel part of the address space
 // (ie. addresses >= UTOP).  The user part of the address space
@@ -263,10 +265,9 @@ page_init(void)
     char *next = boot_alloc(0);
 
 	for (i = 0; i < npages; i++) {
-        int pp = (int)page2pa(pages+i);
-
-        if (i ==0 || (pp >= IOPHYSMEM && pp < PADDR(next))) {
+        if (i ==0 || (i >= PGNUM(IOPHYSMEM) && i < PGNUM(PADDR(next)))) {
 		    pages[i].pp_ref = 1;
+            pages[i].pp_link = 0;
         } else {
 		    pages[i].pp_ref = 0;
 		    pages[i].pp_link = page_free_list;
@@ -291,7 +292,21 @@ struct PageInfo *
 page_alloc(int alloc_flags)
 {
 	// Fill this function in
-	return 0;
+
+    struct PageInfo *alloc = page_free_list;
+    if (alloc == 0) {
+        return NULL;
+    }
+
+    page_free_list = page_free_list->pp_link;
+
+    if (alloc_flags & ALLOC_ZERO) {
+        memset((char *)(page2kva(alloc)), 0, PGSIZE);
+    }
+
+    alloc->pp_link = NULL;
+
+    return alloc;
 }
 
 //
@@ -304,6 +319,17 @@ page_free(struct PageInfo *pp)
 	// Fill this function in
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
 	// pp->pp_link is not NULL.
+
+    if (pp->pp_ref != 0) {
+        panic("page_free: freeing the page whose pp_ref is not 0\n");
+    }
+
+    if (pp->pp_link != 0) {
+        panic("page_free: freeing the page whose pp_link is not NULL\n");
+    }
+
+    pp->pp_link = page_free_list;
+    page_free_list = pp;
 }
 
 //
