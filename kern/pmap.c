@@ -369,11 +369,11 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
     uint32_t pdi = PDX((uintptr_t)va);
     uint32_t pti = PTX((uintptr_t)va);
-    uint32_t pt = pgdir[pdi];
+    pde_t *pde = (pde_t *)(pgdir) + pdi;
     struct PageInfo *newPage;
 
-    if (pt & PTE_P) {
-        return (pte_t *)(KADDR(PTE_ADDR(pt)) + pti);
+    if (*pde & PTE_P) {
+        return (pte_t *)(KADDR(PTE_ADDR(*pde))) + pti;
     }else {
         if (create) {
             newPage = page_alloc(ALLOC_ZERO);
@@ -381,8 +381,8 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
                 return NULL;
             }
             newPage->pp_ref++;
-            pgdir[pdi] = (uint32_t)page2pa(newPage) | PTE_P;
-            return (pte_t *)(KADDR(PTE_ADDR(pt)) + pti); //TODO: not understand why??
+            *pde = (uint32_t)(page2pa(newPage) | PTE_U | PTE_W | PTE_P); //TODO: why there should be phtsical address.
+            return (pte_t *)(KADDR(PTE_ADDR(*pde))) + pti;
         } else {
             return NULL;
         }
@@ -449,12 +449,12 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
         return -E_NO_MEM;
     }
 
+    pp->pp_ref++;
     if (*pte & PTE_P) {
         page_remove(pgdir, va);
     }
 
     *pte = page2pa(pp) | perm | PTE_P;
-    pp->pp_ref++;
     return 0;
 }
 
@@ -473,24 +473,25 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
     pte_t *pte;
-    physaddr_t pa;
+    // pa with capital initial means physical address with addtional signal stands for some configuration
+    uint32_t Pa;
 
-    pte = pgdir_walk(pgdir, va, 1);
+    pte = pgdir_walk(pgdir, va, 0);
     // alloc failure in pgdir_walk
     if (pte == 0) {
         return NULL;
     }
 
     if (pte_store) {
-        pte_store = &pte;
+        *pte_store = pte;
     }
 
-    pa = (physaddr_t)*pte;
-    if (!(pa & PTE_P)) {
+    Pa = (uint32_t)(*pte);
+    if (!(Pa & PTE_P)) {
         return NULL;
     }
 
-    return pa2page(pa);
+    return pa2page(PTE_ADDR(Pa));
 }
 
 //
