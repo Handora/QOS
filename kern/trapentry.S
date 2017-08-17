@@ -47,9 +47,14 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 
-
-
 /*
  * Lab 3: Your code here for _alltraps
  */
+_alltraps:
+    pushl %ds
+    pushl %es
+    pushal
 
+
+    pushl %esp
+    call trap
