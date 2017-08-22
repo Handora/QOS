@@ -30,6 +30,8 @@ static struct Command commands[] = {
 	{ "showmappings", "Display the virtual address between input", mon_showmappings },
 	{ "changePermission", "Change the permission in virtual address when using monitor", mon_changePermission },
 	{ "dump", "Dump the contents of a range of memory given either a virtual or physical address range", mon_dump},
+    { "s", "single step into debugging", single_step},
+    { "c", "continue from debugging", continueDbg},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -202,6 +204,28 @@ mon_dump(int argc, char **argv, struct Trapframe *tf) {
     return 0;
 }
 
+int
+single_step(int argc, char **argv, struct Trapframe *tf) {
+    if (tf && (tf->tf_trapno == T_DEBUG || tf->tf_trapno == T_BRKPT)) {
+        tf->tf_eflags |= FL_TF;
+    } else {
+        cprintf("Not in DEBUG mode\n");
+        return 0;
+    }
+    return -1;
+}
+
+int
+continueDbg(int argc, char **argv, struct Trapframe *tf) {
+    if (tf && (tf->tf_trapno == T_DEBUG || tf->tf_trapno == T_BRKPT)) {
+        tf->tf_eflags &= ~FL_TF;
+    } else {
+        cprintf("Not in DEBUG mode\n");
+        return 0;
+    }
+    return -1;
+}
+
 
 /***** utility for monitor operation *****/
 int
@@ -341,4 +365,6 @@ monitor(struct Trapframe *tf)
 			if (runcmd(buf, tf) < 0)
 				break;
 	}
+
+    return;
 }

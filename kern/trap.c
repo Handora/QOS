@@ -65,42 +65,17 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-    void func0();
-    void func1();
-    void func2();
-    void func3();
-    void func4();
-    void func5();
-    void func6();
-    void func7();
-    void func8();
-    void func10();
-    void func11();
-    void func12();
-    void func13();
-    void func14();
-    void func16();
-    void func17();
-    void func18();
-    void func19();
-    SETGATE(idt[T_DIVIDE], 0, GD_KT, func0, 0);
-    SETGATE(idt[T_DEBUG], 0, GD_KT, func1, 0);
-    SETGATE(idt[T_NMI], 0, GD_KT, func2, 0);
-    SETGATE(idt[T_BRKPT], 0, GD_KT, func3, 0);
-    SETGATE(idt[T_OFLOW], 0, GD_KT, func4, 0);
-    SETGATE(idt[T_BOUND], 0, GD_KT, func5, 0);
-    SETGATE(idt[T_ILLOP], 0, GD_KT, func6, 0);
-    SETGATE(idt[T_DEVICE], 0, GD_KT, func7, 0);
-    SETGATE(idt[T_DBLFLT], 0, GD_KT, func8, 0);
-    SETGATE(idt[T_TSS], 0, GD_KT, func10, 0);
-    SETGATE(idt[T_SEGNP], 0, GD_KT, func11, 0);
-    SETGATE(idt[T_STACK], 0, GD_KT, func12, 0);
-    SETGATE(idt[T_GPFLT], 0, GD_KT, func13, 0);
-    SETGATE(idt[T_PGFLT], 0, GD_KT, func14, 0);
-    SETGATE(idt[T_FPERR], 0, GD_KT, func16, 0);
-    SETGATE(idt[T_ALIGN], 0, GD_KT, func17, 0);
-    SETGATE(idt[T_MCHK], 0, GD_KT, func18, 0);
-    SETGATE(idt[T_SIMDERR], 0, GD_KT, func19, 0);
+    int i, dpl;
+    extern void (*handler[])();
+    for (i=0; i<20; i++) {
+        if (i!=9 && i!=15) {
+            dpl=0;
+            if (i==T_BRKPT) {
+                dpl=3;
+            }
+            SETGATE(idt[i], 0, GD_KT, handler[i], dpl);
+        }
+    }
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -179,6 +154,16 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+
+    if (tf->tf_trapno == T_BRKPT || tf->tf_trapno == T_DEBUG) {
+        monitor(tf);
+        return ;
+    }
+
+    if (tf->tf_trapno == T_PGFLT) {
+        page_fault_handler(tf);
+        return ;
+    }
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);

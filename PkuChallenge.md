@@ -16,3 +16,6 @@
 14. (Lab6) 结合Lab6介绍一下PCI总线
 15. (Lab6) 实现一个更高效的malloc
 16. (Lab7) 从Lab7de topic中任选一个进行介绍，能实现最好
+
+question:
+1. why movw $GD_KD, %ax is true, while ----, %es or %ds is true, see kern/trapentry.S

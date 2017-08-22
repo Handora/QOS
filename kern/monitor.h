@@ -18,6 +18,8 @@ int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
 int mon_showmappings(int argc, char **argv, struct Trapframe *tf);
 int mon_changePermission(int argc, char **argv, struct Trapframe *tf);
 int mon_dump(int argc, char **argv, struct Trapframe *tf);
+int single_step(int argc, char **argv, struct Trapframe *tf);
+int continueDbg(int argc, char **argv, struct Trapframe *tf);
 
 // Utility for monitor function use
 int htop(const char *hvp, uintptr_t *vm);
