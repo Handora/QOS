@@ -67,6 +67,7 @@ trap_init(void)
 	// LAB 3: Your code here.
     int i, dpl;
     extern void (*handler[])();
+    extern void func48();
     for (i=0; i<20; i++) {
         if (i!=9 && i!=15) {
             dpl=0;
@@ -76,6 +77,7 @@ trap_init(void)
             SETGATE(idt[i], 0, GD_KT, handler[i], dpl);
         }
     }
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, func48, 3);
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -161,7 +163,18 @@ trap_dispatch(struct Trapframe *tf)
     }
 
     if (tf->tf_trapno == T_PGFLT) {
+        if ((tf->tf_cs & 0x3) == 0) {
+            panic("page fault happens in kernel mode");
+        }
         page_fault_handler(tf);
+        return ;
+    }
+
+    if (tf->tf_trapno == T_SYSCALL) {
+        tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax,
+                tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+                tf->tf_regs.reg_ebx, tf->tf_regs.reg_edx,
+                tf->tf_regs.reg_esi);
         return ;
     }
 
