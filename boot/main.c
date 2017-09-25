@@ -52,7 +52,7 @@ bootmain(void)
 	eph = ph + ELFHDR->e_phnum;
 	for (; ph < eph; ph++)
 		// p_pa is the load address of this segment (as well
-		// as the physical address)
+		// as the cal address)
 		readseg(ph->p_pa, ph->p_memsz, ph->p_offset);
 
 	// call the entry point from the ELF header
