@@ -279,7 +279,13 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
+    int i;
+    uintptr_t kstacktop_i;
 
+    for (i=0; i<NCPU; i++) {
+        kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+        boot_map_region(kern_pgdir, kstacktop_i-KSTKSIZE, KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W);
+    }
 }
 
 // --------------------------------------------------------------
@@ -610,6 +616,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// value will be preserved between calls to mmio_map_region
 	// (just like nextfree in boot_alloc).
 	static uintptr_t base = MMIOBASE;
+    uintptr_t old_base = base;
 
 	// Reserve size bytes of virtual memory starting at base and
 	// map physical pages [pa,pa+size) to virtual addresses
@@ -636,7 +643,7 @@ mmio_map_region(physaddr_t pa, size_t size)
     }
     boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W);
     base+=size;
-    return (void *)base;
+    return (void *)old_base;
 }
 
 static uintptr_t user_mem_check_addr;
