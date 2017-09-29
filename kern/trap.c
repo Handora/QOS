@@ -219,9 +219,6 @@ trap_dispatch(struct Trapframe *tf)
     }
 
     if (tf->tf_trapno == T_PGFLT) {
-        if ((tf->tf_cs & 0x3) == 0) {
-            panic("page fault happens in kernel mode");
-        }
         page_fault_handler(tf);
         return ;
     }
@@ -373,7 +370,8 @@ page_fault_handler(struct Trapframe *tf)
     }
     user_mem_assert(curenv, (void *)utf, len, PTE_W | PTE_P);
 
-    utf->utf_esp = (uintptr_t)utf;
+    utf->utf_esp = tf->tf_esp;
+    utf->utf_eip = tf->tf_eip;
     utf->utf_regs = tf->tf_regs;
     utf->utf_eflags = tf->tf_eflags;
     utf->utf_fault_va = fault_va;
