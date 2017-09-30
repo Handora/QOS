@@ -257,7 +257,6 @@ sys_page_map(envid_t srcenvid, void *srcva,
     if ((page = page_lookup(se->env_pgdir, srcva, &pte)) == NULL) {
         return -E_INVAL;
     }
-
     sperm = (*pte)&0xfff;
 
     if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P)) {
