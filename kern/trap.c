@@ -85,6 +85,9 @@ trap_init(void)
         }
     }
     SETGATE(idt[T_SYSCALL], 0, GD_KT, func48, 3);
+    for (i=32; i<48; i++) {
+        SETGATE(idt[i], 0, GD_KT, handler[i], 0);
+    }
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -210,8 +213,10 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-
-
+    if (tf->tf_trapno == IRQ_OFFSET+IRQ_TIMER) {
+        lapic_eoi();
+        sched_yield();
+    }
 
     if (tf->tf_trapno == T_BRKPT || tf->tf_trapno == T_DEBUG) {
         monitor(tf);
@@ -244,9 +249,6 @@ trap_dispatch(struct Trapframe *tf)
 void
 trap(struct Trapframe *tf)
 {
-    if (tf->tf_cs & 0x3) {
-        lock_kernel();
-    }
 
 	// The environment may have set DF and some versions
 	// of GCC rely on DF being clear
@@ -272,6 +274,7 @@ trap(struct Trapframe *tf)
 		// serious kernel work.
 		// LAB 4: Your code here.
 		assert(curenv);
+        lock_kernel();
 
 		// Garbage collect if current enviroment is a zombie
 		if (curenv->env_status == ENV_DYING) {
