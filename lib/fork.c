@@ -154,6 +154,7 @@ fork(void)
     uintptr_t addr;
 	// LAB 4: Your code here.
     extern void _pgfault_upcall();
+    set_pgfault_handler(pgfault);
     if ((pid = sys_exofork()) < 0) {
         return pid;
     }
