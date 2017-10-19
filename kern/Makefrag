@@ -74,6 +74,7 @@ KERN_BINFILES +=	user/idle \
 			user/spin \
 			user/fairness \
 			user/pingpong \
+            user/sfork \
 			user/pingpongs \
 			user/primes
 KERN_OBJFILES := $(patsubst %.c, $(OBJDIR)/%.o, $(KERN_SRCFILES))

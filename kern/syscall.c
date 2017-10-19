@@ -293,7 +293,7 @@ sys_page_unmap(envid_t envid, void *va)
     if ((err = envid2env(envid, &e, 1)) < 0) {
         return err;
     }
-    if ((uintptr_t)va >= UTOP || (uintptr_t)va % PGSIZE !=0) {
+    if ((uintptr_t)va >= UTOP || (uintptr_t)va % PGSIZE != 0) {
         return -E_INVAL;
     }
 
