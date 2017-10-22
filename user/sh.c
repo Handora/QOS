@@ -22,7 +22,7 @@ void
 runcmd(char* s)
 {
 	char *argv[MAXARGS], *t, argv0buf[BUFSIZ];
-	int argc, c, i, r, p[2], fd, pipe_child;
+	int argc, c, i, r, p[2], fd, pipe_child, origin_fd;
 
 	pipe_child = 0;
 	gettoken(s, 0);
@@ -55,7 +55,15 @@ again:
 			// then close the original 'fd'.
 
 			// LAB 5: Your code here.
-			panic("< redirection not implemented");
+            if ((fd=open(t, O_RDONLY)) < 0) {
+				cprintf("open %s for write: %e", t, fd);
+				exit();
+            }
+            if (fd != 0) {
+                dup(fd, 0);
+                close(fd);
+            }
+
 			break;
 
 		case '>':	// Output redirection
