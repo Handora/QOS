@@ -48,7 +48,6 @@ i386_init(void)
 
 	// Lab 4 multitasking initialization functions
 	pic_init();
-
 	// Lab 6 hardware initialization functions
 	time_init();
 	pci_init();
@@ -71,15 +70,14 @@ i386_init(void)
 
 #if defined(TEST)
 	// Don't touch -- used by grading script!
-	ENV_CREATE(TEST, ENV_TYPE_USER);
+	// ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_icode, ENV_TYPE_USER);
+	// ENV_CREATE(user_icode, ENV_TYPE_USER);
 #endif // TEST*
 
 	// Should not be necessary - drains keyboard because interrupt has given up.
 	kbd_intr();
-
 	// Schedule and run the first user environment!
 	sched_yield();
 }
