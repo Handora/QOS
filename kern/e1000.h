@@ -4,6 +4,8 @@
 
 #define NTXDESC        64
 #define TXBUFSIZE      1518
+#define NRXDESC        128
+#define RXBUFSIZE      2408
 
 #define E1000_TDBAL    0x03800  /* TX Descriptor Base Address Low - RW */
 #define E1000_TDBAH    0x03804  /* TX Descriptor Base Address High - RW */
@@ -53,6 +55,60 @@
 #define E1000_TXD_CMD_TSE    0x04000000 /* TCP Seg enable */
 #define E1000_TXD_STAT_TC    0x00000004 /* Tx Underrun */
 
+/* Receive Address */
+#define E1000_RAL       0x05400         /* Receive Address Low */
+#define E1000_RAH       0x05404         /* Receive Address High */
+#define E1000_RAH_AV    0x80000000      /* Receive descriptor valid */
+
+#define E1000_RDBAL    0x02800  /* RX Descriptor Base Address Low - RW */
+#define E1000_RDBAH    0x02804  /* RX Descriptor Base Address High - RW */
+#define E1000_RDLEN    0x02808  /* RX Descriptor Length - RW */
+#define E1000_RDH      0x02810  /* RX Descriptor Head - RW */
+#define E1000_RDT      0x02818  /* RX Descriptor Tail - RW */
+
+/* Receive Control */
+#define E1000_RCTL                0x00100       /* RX Control - RW */
+#define E1000_RCTL_RST            0x00000001    /* Software reset */
+#define E1000_RCTL_EN             0x00000002    /* enable */
+#define E1000_RCTL_SBP            0x00000004    /* store bad packet */
+#define E1000_RCTL_UPE            0x00000008    /* unicast promiscuous enable */
+#define E1000_RCTL_MPE            0x00000010    /* multicast promiscuous enab */
+#define E1000_RCTL_LPE            0x00000020    /* long packet enable */
+#define E1000_RCTL_LBM_NO         0x00000000    /* no loopback mode */
+#define E1000_RCTL_LBM_MAC        0x00000040    /* MAC loopback mode */
+#define E1000_RCTL_LBM_SLP        0x00000080    /* serial link loopback mode */
+#define E1000_RCTL_LBM_TCVR       0x000000C0    /* tcvr loopback mode */
+#define E1000_RCTL_DTYP_MASK      0x00000C00    /* Descriptor type mask */
+#define E1000_RCTL_DTYP_PS        0x00000400    /* Packet Split descriptor */
+#define E1000_RCTL_RDMTS_HALF     0x00000000    /* rx desc min threshold size */
+#define E1000_RCTL_RDMTS_QUAT     0x00000100    /* rx desc min threshold size */
+#define E1000_RCTL_RDMTS_EIGTH    0x00000200    /* rx desc min threshold size */
+#define E1000_RCTL_MO_SHIFT       12            /* multicast offset shift */
+#define E1000_RCTL_MO_0           0x00000000    /* multicast offset 11:0 */
+#define E1000_RCTL_MO_1           0x00001000    /* multicast offset 12:1 */
+#define E1000_RCTL_MO_2           0x00002000    /* multicast offset 13:2 */
+#define E1000_RCTL_MO_3           0x00003000    /* multicast offset 15:4 */
+#define E1000_RCTL_MDR            0x00004000    /* multicast desc ring 0 */
+#define E1000_RCTL_BAM            0x00008000    /* broadcast enable */
+/* these buffer sizes are valid if E1000_RCTL_BSEX is 0 */
+#define E1000_RCTL_SZ_2048        0x00000000    /* rx buffer size 2048 */
+#define E1000_RCTL_SZ_1024        0x00010000    /* rx buffer size 1024 */
+#define E1000_RCTL_SZ_512         0x00020000    /* rx buffer size 512 */
+#define E1000_RCTL_SZ_256         0x00030000    /* rx buffer size 256 */
+/* these buffer sizes are valid if E1000_RCTL_BSEX is 1 */
+#define E1000_RCTL_SZ_16384       0x00010000    /* rx buffer size 16384 */
+#define E1000_RCTL_SZ_8192        0x00020000    /* rx buffer size 8192 */
+#define E1000_RCTL_SZ_4096        0x00030000    /* rx buffer size 4096 */
+#define E1000_RCTL_VFE            0x00040000    /* vlan filter enable */
+#define E1000_RCTL_CFIEN          0x00080000    /* canonical form enable */
+#define E1000_RCTL_CFI            0x00100000    /* canonical form indicator */
+#define E1000_RCTL_DPF            0x00400000    /* discard pause frames */
+#define E1000_RCTL_PMCF           0x00800000    /* pass MAC control frames */
+#define E1000_RCTL_BSEX           0x02000000    /* Buffer size extension */
+#define E1000_RCTL_SECRC          0x04000000    /* Strip Ethernet CRC */
+#define E1000_RCTL_FLXBUF_MASK    0x78000000    /* Flexible buffer size */
+#define E1000_RCTL_FLXBUF_SHIFT   27            /* Flexible buffer shift */
+
 struct tx_desc {
     uint64_t addr;
     uint16_t length;
@@ -63,8 +119,21 @@ struct tx_desc {
     uint16_t special;
 } __attribute__((packed));
 
+struct rx_desc {
+    uint64_t addr;
+    uint16_t length;
+    uint16_t cso;
+    uint8_t status;
+    uint8_t errors;
+    uint16_t special;
+} __attribute__((packed));
+
 struct tx_pkt {
     uint8_t buf[TXBUFSIZE];
+} __attribute__((packed));
+
+struct rx_pkt {
+    uint8_t buf[RXBUFSIZE];
 } __attribute__((packed));
 
 int e1000_attach(struct pci_func *pfp);
