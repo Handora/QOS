@@ -122,3 +122,8 @@ sys_time_msec(void)
 {
 	return (unsigned int) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
 }
+
+int
+sys_net_try_transmit(const char *data, int len) {
+    return (int) syscall(SYS_net_try_transmit, 1, (uint32_t)data, (uint32_t)len, 0, 0, 0);
+}

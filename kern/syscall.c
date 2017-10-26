@@ -4,7 +4,7 @@
 #include <inc/error.h>
 #include <inc/string.h>
 #include <inc/assert.h>
-
+#include <kern/e1000.h>
 #include <kern/env.h>
 #include <kern/pmap.h>
 #include <kern/trap.h>
@@ -450,6 +450,14 @@ sys_time_msec(void)
     return time_msec();
 }
 
+
+static int
+sys_net_try_transmit(const char *pkt, int len) {
+    user_mem_assert(curenv, pkt, len, PTE_U);
+    return transmit(pkt, len);
+}
+
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -494,6 +502,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_env_set_trapframe((envid_t)a1, (struct Trapframe *)a2);
     case SYS_time_msec:
         return sys_time_msec();
+    case SYS_net_try_transmit:
+        return sys_net_try_transmit((const char *)a1, (int)a2);
 	default:
 		return -E_INVAL;
 	}
