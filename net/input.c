@@ -17,9 +17,14 @@ input(envid_t ns_envid)
 
     while (1) {
         nsipcbuf.pkt.jp_len = PGSIZE - 4;
-        if ((r=sys_net_try_receive(nsipcbuf.pkt.jp_data, &nsipcbuf.pkt.jp_len)) < 0) {
-            panic("input error: %e", r);
+        while ((r=sys_net_try_receive(nsipcbuf.pkt.jp_data, &nsipcbuf.pkt.jp_len)) < 0) {
+            if (r != -E_RX_QUEUE_EMPTY) {
+                panic("input error: %e", r);
+            }
+            sys_yield();
         }
         ipc_send(ns_envid, NSREQ_INPUT, &nsipcbuf, PTE_U | PTE_W | PTE_P);
+        sys_yield();
+        sys_yield();
     }
 }

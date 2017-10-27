@@ -461,11 +461,7 @@ static int
 sys_net_try_receive(char *pkt, int *len) {
     int r;
     if ((r=receive(pkt, len)) < 0) {
-        if (r != -E_RX_QUEUE_EMPTY) {
-            return r;
-        } else {
-            sys_yield();
-        }
+        return r;
     }
     return 0;
 }
