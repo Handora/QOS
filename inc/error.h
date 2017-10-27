@@ -26,6 +26,7 @@ enum {
 	E_NOT_EXEC	,	// File not a valid executable
 	E_NOT_SUPP	,	// Operation not supported
     E_TX_QUEUE_OVERFLOW ,  // The net transmission queue is overflow
+    E_RX_QUEUE_EMPTY,  // The net receive queue is empty
 	MAXERROR
 };
 

@@ -138,4 +138,5 @@ struct rx_pkt {
 
 int e1000_attach(struct pci_func *pfp);
 int transmit(const char *buf, int len);
+int receive(char *buf, int *len);
 #endif	// JOS_KERN_E1000_H

@@ -13,4 +13,13 @@ input(envid_t ns_envid)
 	// Hint: When you IPC a page to the network server, it will be
 	// reading from it for a while, so don't immediately receive
 	// another packet in to the same physical page.
+    int r;
+
+    while (1) {
+        nsipcbuf.pkt.jp_len = PGSIZE - 4;
+        if ((r=sys_net_try_receive(nsipcbuf.pkt.jp_data, &nsipcbuf.pkt.jp_len)) < 0) {
+            panic("input error: %e", r);
+        }
+        ipc_send(ns_envid, NSREQ_INPUT, &nsipcbuf, PTE_U | PTE_W | PTE_P);
+    }
 }

@@ -457,6 +457,18 @@ sys_net_try_transmit(const char *pkt, int len) {
     return transmit(pkt, len);
 }
 
+static int
+sys_net_try_receive(char *pkt, int *len) {
+    int r;
+    if ((r=receive(pkt, len)) < 0) {
+        if (r != -E_RX_QUEUE_EMPTY) {
+            return r;
+        } else {
+            sys_yield();
+        }
+    }
+    return 0;
+}
 
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
@@ -504,6 +516,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_time_msec();
     case SYS_net_try_transmit:
         return sys_net_try_transmit((const char *)a1, (int)a2);
+    case SYS_net_try_receive:
+        return sys_net_try_receive((char *)a1, (int *)a2);
 	default:
 		return -E_INVAL;
 	}

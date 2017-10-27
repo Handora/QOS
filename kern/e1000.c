@@ -29,7 +29,8 @@ receive_init() {
     eBar[E1000_RDBAL/4] = PADDR(rxDescRing);
     eBar[E1000_RDBAH/4] = 0;
     eBar[E1000_RDLEN/4] = sizeof(struct rx_desc) * NRXDESC;
-    eBar[E1000_RDH/4] = eBar[E1000_RDT/4] = 0;
+    eBar[E1000_RDH/4] = 0;
+    eBar[E1000_RDT/4] = NRXDESC-1;
     rctl = E1000_RCTL_EN | /* E1000_RCTL_LPE | */ E1000_RCTL_BAM | E1000_RCTL_SZ_2048 | E1000_RCTL_SECRC | E1000_RCTL_LBM_NO;
     eBar[E1000_RCTL/4] = rctl;
 }
@@ -59,6 +60,25 @@ transmit_init() {
     eBar[E1000_TIPG/4] = 0 | (E1000_TIPG_IPGT & (10));
     eBar[E1000_TIPG/4] |= E1000_TIPG_IPGR1 & (4 << 10);
     eBar[E1000_TIPG/4] |= E1000_TIPG_IPGR2 & (6 << 20);
+}
+
+int
+check_for_receive(struct rx_desc *desc) {
+    return (desc->status & 0x3);
+}
+
+int
+receive(char *buf, int *len) {
+    struct rx_desc *desc = &rxDescRing[(eBar[E1000_RDT/4]+1)%NRXDESC];
+    struct rx_pkt *rxbuf = &rxBuf[(eBar[E1000_RDT/4]+1)%NRXDESC];
+    if (!check_for_receive(desc)) {
+        return -E_RX_QUEUE_EMPTY;
+    }
+    *len = desc->length>*len?*len:desc->length;
+    memmove(buf, rxbuf, *len);
+    desc->status &= ~0x3;
+    eBar[E1000_RDT/4] = (eBar[E1000_RDT/4]+1)%NRXDESC;
+    return 0;
 }
 
 int
