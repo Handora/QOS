@@ -196,6 +196,7 @@ env_setup_vm(struct Env *e)
     page_insert(e->env_pgdir, pages, (void *)UPAGES, PTE_U | PTE_P);
 
     // can use memcpy
+    // TODO: may chould only copy ones upon the kernel part
     memcpy(e->env_pgdir, kern_pgdir, PGSIZE);
 
 	// UVPT maps the env's own page table read-only.
