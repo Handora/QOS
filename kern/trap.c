@@ -74,6 +74,7 @@ trap_init(void)
             if (i==T_BRKPT) {
                 dpl=3;
             }
+            // the second 'is_trap' means that disable the interrupt from happen
             SETGATE(idt[i], 0, GD_KT, handler[i], dpl);
         }
     }
